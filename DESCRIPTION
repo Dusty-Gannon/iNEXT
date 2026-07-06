@@ -23,13 +23,17 @@ License: GPL (>= 3)
 URL: https://sites.google.com/view/chao-lab-website/software/inext
 Maintainer: Anne Chao <chao@stat.nthu.edu.tw>
 Depends:
-    R (>= 3.4)
+    R (>= 3.4.0)
 Imports:
-    stats,
-    graphics,
     ggplot2,
+    graphics,
+    methods,
+    Rcpp (>= 0.12.0),
+    RcppParallel (>= 5.0.1),
     reshape2,
-    Rcpp
+    rstan (>= 2.18.1),
+    rstantools (>= 2.4.0),
+    stats
 BugReports: https://github.com/AnneChao/iNEXT/issues
 LazyLoad: yes
 RoxygenNote: 7.2.0
@@ -41,4 +45,12 @@ Suggests: testthat,
 VignetteBuilder: knitr
 ByteCompile: true
 LinkingTo: 
-    Rcpp
+    BH (>= 1.66.0),
+    Rcpp (>= 0.12.0),
+    RcppEigen (>= 0.3.3.3.0),
+    RcppParallel (>= 5.0.1),
+    rstan (>= 2.18.1),
+    StanHeaders (>= 2.18.0)
+Biarch: true
+SystemRequirements: GNU make
+Encoding: UTF-8
