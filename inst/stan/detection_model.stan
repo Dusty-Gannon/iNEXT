@@ -13,7 +13,8 @@ data {
   // --- set design for iNEXT plot comparisons --- //
   int N_new;              // number of design points
   matrix[K, N_new] X_new; // design matrix
-  
+  int t_obs_max;          // upper bound on effective sample size; rows beyond t_obs_int[i] stay 0
+
 }
 
 // transformed data{
@@ -59,7 +60,7 @@ generated quantities {
 
   for(s in 1:S_obs){
     vector[N] weights_s = inv_logit(beta[s, ] * X)';
-    matrix[K, K] I_beta_s = X * diagonal(weights_s) * X';
+    matrix[K, K] I_beta_s = X * diag_matrix(weights_s) * X';
     matrix[K, K] I_beta_s_inv = inverse(I_beta_s);
     vector[N_new] t_obs_s;
     for(i in 1:N_new){
@@ -75,16 +76,16 @@ generated quantities {
   // integer version needed for array dims and loop bounds
   array[N_new] int t_obs_int;
   for(i in 1:N_new) t_obs_int[i] = to_int(t_obs[i]);
-  int t_obs_max = max(t_obs_int);
 
   // --- construct expected incidence frequency counts --- //
   matrix[t_obs_max + 1, N_new] Qt_new = rep_matrix(0.0, t_obs_max + 1, N_new);
 
   for(i in 1:N_new){
-    Qt_new[1, i] = t_obs[i];
+    Qt_new[1, i] = t_obs_int[i];
     matrix[S_obs, t_obs_int[i]] W_new = rep_matrix(0.0, S_obs, t_obs_int[i]);
     for(k in 2:(t_obs_int[i] + 1)){
       for(s in 1:S_obs){
+        W_new[s, i] = bernoulli_rng(P_new[s, i]);
         if(sum(W_new[s, ]) == (k - 1)){
           Qt_new[k, i] += 1;
         }

@@ -29,28 +29,21 @@ Imports:
     graphics,
     methods,
     Rcpp (>= 0.12.0),
-    RcppParallel (>= 5.0.1),
     reshape2,
-    rstan (>= 2.18.1),
-    rstantools (>= 2.4.0),
     stats
 BugReports: https://github.com/AnneChao/iNEXT/issues
 LazyLoad: yes
 RoxygenNote: 7.2.0
-Suggests: testthat,
+Suggests:
+    rstan (>= 2.18.1),
+    testthat,
     knitr,
     rmarkdown,
     gridExtra,
     ggthemes
 VignetteBuilder: knitr
 ByteCompile: true
-LinkingTo: 
-    BH (>= 1.66.0),
+LinkingTo:
     Rcpp (>= 0.12.0),
-    RcppEigen (>= 0.3.3.3.0),
-    RcppParallel (>= 5.0.1),
-    rstan (>= 2.18.1),
-    StanHeaders (>= 2.18.0)
-Biarch: true
-SystemRequirements: GNU make
+    RcppEigen (>= 0.3.3.3.0)
 Encoding: UTF-8

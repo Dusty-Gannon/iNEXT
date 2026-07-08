@@ -107,8 +107,6 @@ BEGIN_RCPP
 END_RCPP
 }
 
-RcppExport SEXP _rcpp_module_boot_stan_fit4detection_model_mod();
-
 static const R_CallMethodDef CallEntries[] = {
     {"_iNEXT_D1_2nd", (DL_FUNC) &_iNEXT_D1_2nd, 3},
     {"_iNEXT_Dq_2nd", (DL_FUNC) &_iNEXT_Dq_2nd, 4},
@@ -117,7 +115,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_iNEXT_qD_MLE", (DL_FUNC) &_iNEXT_qD_MLE, 2},
     {"_iNEXT_RTD", (DL_FUNC) &_iNEXT_RTD, 4},
     {"_iNEXT_RTD_inc", (DL_FUNC) &_iNEXT_RTD_inc, 4},
-    {"_rcpp_module_boot_stan_fit4detection_model_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4detection_model_mod, 0},
     {NULL, NULL, 0}
 };
 
