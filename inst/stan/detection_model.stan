@@ -59,34 +59,38 @@ generated quantities {
   vector[N_new] t_obs = rep_vector(0.0, N_new);
 
   for(s in 1:S_obs){
-    vector[N] weights_s = inv_logit(beta[s, ] * X)';
+    vector[N] p_s = inv_logit(beta[s, ] * X)';
+    vector[N] weights_s = p_s .* (1 - p_s);
     matrix[K, K] I_beta_s = X * diag_matrix(weights_s) * X';
     matrix[K, K] I_beta_s_inv = inverse(I_beta_s);
     vector[N_new] t_obs_s;
     for(i in 1:N_new){
       // per-design-point gradient: dP/d_beta = p*(1-p)*x_i, shape [K]
       vector[K] grad_s_i = X_new[, i] * (P_new[s, i] * (1 - P_new[s, i]));
-      t_obs_s[i] = (1.0 / P_new[s, i]) / quad_form(I_beta_s_inv, grad_s_i);
+      t_obs_s[i] =   P_new[s, i] * (1 - P_new[s, i]) / (quad_form(I_beta_s_inv, grad_s_i));
     }
     t_obs += t_obs_s;
   }
 
-  t_obs = floor(t_obs / S_obs);
+  t_obs = t_obs / S_obs;
 
   // integer version needed for array dims and loop bounds
+  // clamped to t_obs_max since Qt_new only has t_obs_max + 1 rows
   array[N_new] int t_obs_int;
-  for(i in 1:N_new) t_obs_int[i] = to_int(t_obs[i]);
+  for(i in 1:N_new) t_obs_int[i] = min(to_int(t_obs[i]), t_obs_max);
 
   // --- construct expected incidence frequency counts --- //
-  matrix[t_obs_max + 1, N_new] Qt_new = rep_matrix(0.0, t_obs_max + 1, N_new);
+  array[t_obs_max + 1, N_new] int Qt_new = rep_array(0, t_obs_max + 1, N_new);
 
   for(i in 1:N_new){
     Qt_new[1, i] = t_obs_int[i];
-    matrix[S_obs, t_obs_int[i]] W_new = rep_matrix(0.0, S_obs, t_obs_int[i]);
+    array[S_obs, t_obs_int[i]] int W_new_i = rep_array(0, S_obs, t_obs_int[i]);
+    for(s in 1:S_obs){
+      W_new_i[s, ] = bernoulli_rng(rep_array(P_new[s, i], t_obs_int[i]));
+    }
     for(k in 2:(t_obs_int[i] + 1)){
       for(s in 1:S_obs){
-        W_new[s, i] = bernoulli_rng(P_new[s, i]);
-        if(sum(W_new[s, ]) == (k - 1)){
+        if(sum(W_new_i[s, ]) == (k - 1)){
           Qt_new[k, i] += 1;
         }
       }
