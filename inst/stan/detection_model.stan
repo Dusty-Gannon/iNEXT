@@ -13,7 +13,7 @@ data {
   // --- set design for iNEXT plot comparisons --- //
   int N_new;              // number of design points
   matrix[K, N_new] X_new; // design matrix
-  int t_obs_max;          // upper bound on effective sample size; rows beyond t_obs_int[i] stay 0
+  int t_obs_max;          // upper bound on effective sample size (used to clamp t_obs_int)
 
 }
 
@@ -74,26 +74,21 @@ generated quantities {
 
   t_obs = t_obs / S_obs;
 
-  // integer version needed for array dims and loop bounds
-  // clamped to t_obs_max since Qt_new only has t_obs_max + 1 rows
+  // integer version needed for loop bounds; clamped to avoid unbounded W_new_i allocation
   array[N_new] int t_obs_int;
   for(i in 1:N_new) t_obs_int[i] = min(to_int(t_obs[i]), t_obs_max);
 
-  // --- construct expected incidence frequency counts --- //
-  array[t_obs_max + 1, N_new] int Qt_new = rep_array(0, t_obs_max + 1, N_new);
+  // --- generate per-species detection counts (iNEXT incidence-freq format) ---
+  // incfreq_new[1, i]     = t_obs_int[i]  (effective sample size)
+  // incfreq_new[s + 1, i] = detections for species s out of t_obs_int[i] pseudo-sites
+  array[S_obs + 1, N_new] int incfreq_new = rep_array(0, S_obs + 1, N_new);
 
   for(i in 1:N_new){
-    Qt_new[1, i] = t_obs_int[i];
+    incfreq_new[1, i] = t_obs_int[i];
     array[S_obs, t_obs_int[i]] int W_new_i = rep_array(0, S_obs, t_obs_int[i]);
     for(s in 1:S_obs){
       W_new_i[s, ] = bernoulli_rng(rep_array(P_new[s, i], t_obs_int[i]));
-    }
-    for(k in 2:(t_obs_int[i] + 1)){
-      for(s in 1:S_obs){
-        if(sum(W_new_i[s, ]) == (k - 1)){
-          Qt_new[k, i] += 1;
-        }
-      }
+      incfreq_new[s + 1, i] = sum(W_new_i[s, ]);
     }
   }
 
