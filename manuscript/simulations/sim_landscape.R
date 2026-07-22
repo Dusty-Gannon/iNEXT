@@ -50,8 +50,8 @@ sample_landscape <- function(
 
   W_full <- landscape$W_full
   env <- landscape$env
-  n_grid_x <- landscape$n_grid_x
-  n_grid_y <- landscape$n_grid_y
+  n_grid_x <- dim(W_full)[2]
+  n_grid_y <- dim(W_full)[3]
   n_species <- dim(W_full)[1]
 
   if (is.null(y_levels)) y_levels <- seq_len(n_grid_y)

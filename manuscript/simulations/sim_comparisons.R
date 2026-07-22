@@ -16,10 +16,25 @@ n_samps <- 30
 
 data_full <- sim_landscape(
   n_grid_x = grid_size,
-  n_grid_y = grid_size,
-  y_levels = seq(1, grid_size, by = floor(grid_size / n_samps)),
-  
+  n_grid_y = grid_size
 )
+
+## ---- Sampling from the landscape ----
+
+y_idx <- sample(floor(grid_size / 3):(floor(grid_size / 3) * 2), size = 1)
+# sample along the gradient
+W_standard <- sample_landscape(
+  data_full,
+  y_levels = y_idx,
+  n_reps = n_samps
+)
+
+dat_incfreq <- rowSums(W_standard$W)
+
+dat_incfreq <- c(n_samps, dat_incfreq)
+
+std_estims <- iNEXT(dat_incfreq, datatype = "incidence_freq")
+
 
 
 
