@@ -32,8 +32,13 @@ parameters {
 model {
   
   // --- priors --- //
+  // Intercept centered at logit(-1) ~ 0.27 detection rate; slope coefficients
+  // centered at 0.  Both use sd=2 to allow rare species (logit < -4) and
+  // near-certain detectors (logit > 3) without strong shrinkage to 0.5.
   for(s in 1:S_obs){
-    beta[s, ] ~ normal(0, 1);
+    beta[s, 1] ~ normal(0, 3);
+    if(K > 1)
+      beta[s, 2:K] ~ normal(0, 4);
   }
   
   for(s in 1:S_obs){

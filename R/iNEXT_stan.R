@@ -21,21 +21,33 @@
 
   out <- do.call(rbind, lapply(seq_len(N_new), function(k) {
 
-    t_vals <- vapply(seq_len(use_ndraws),
-                     function(i) incfreq_draws_list[[i]][[k]][1L],
-                     numeric(1L))
-    s_vals <- vapply(seq_len(use_ndraws),
-                     function(i) sum(incfreq_draws_list[[i]][[k]][-1L] > 0L),
-                     numeric(1L))
-    sc_vals <- vapply(seq_len(use_ndraws), function(i) {
-      y <- incfreq_draws_list[[i]][[k]]
-      Chat.Sam(y, y[1L])
-    }, numeric(1L))
+    t_vals <- vapply(
+      seq_len(use_ndraws),
+      function(i){ incfreq_draws_list[[i]][[k]][1L] },
+      numeric(1L)
+    )
+    s_vals <- vapply(
+      seq_len(use_ndraws),
+      function(i){ sum(incfreq_draws_list[[i]][[k]][-1L] > 0L) },
+      numeric(1L)
+    )
+    sc_vals <- vapply(
+      seq_len(use_ndraws), 
+      function(i) {
+        y <- incfreq_draws_list[[i]][[k]]
+        Chat.Sam(y, y[1L])
+      }, 
+      numeric(1L)
+    )
     # Qk_mat[j, i] = number of species with exactly j detections in draw i
-    Qk_mat <- vapply(seq_len(use_ndraws), function(i) {
-      counts <- incfreq_draws_list[[i]][[k]][-1L]
-      vapply(1:10, function(j) sum(counts == j), integer(1L))
-    }, integer(10L))
+    Qk_mat <- vapply(
+      seq_len(use_ndraws),
+      function(i) {
+        counts <- incfreq_draws_list[[i]][[k]][-1L]
+        vapply(1:10, function(j) sum(counts == j), integer(1L))
+      },
+      integer(10L)
+    )
 
     t_s <- .summ(t_vals, digits = 0L)
     s_s <- .summ(s_vals, digits = 0L)
@@ -77,9 +89,11 @@
 
   do.call(rbind, lapply(seq_len(N_new), function(k) {
 
-    T_k <- round(median(vapply(seq_len(use_ndraws),
-                               function(i) incfreq_draws_list[[i]][[k]][1L],
-                               numeric(1L))))
+    T_k <- round(median(vapply(
+      seq_len(use_ndraws),
+      function(i){ incfreq_draws_list[[i]][[k]][1L] },
+      numeric(1L))
+    ))
 
     crv_k <- curves[[k]]
 
@@ -129,9 +143,11 @@
                                    pt_names, size_based, q, conf_probs) {
   do.call(rbind, lapply(seq_len(N_new), function(k) {
 
-    T_k <- round(median(vapply(seq_len(use_ndraws),
-                               function(i) incfreq_draws_list[[i]][[k]][1L],
-                               numeric(1L))))
+    T_k <- round(median(vapply(
+      seq_len(use_ndraws),
+      function(i){ incfreq_draws_list[[i]][[k]][1L] },
+      numeric(1L)
+    )))
 
     # SC grid from posterior-mean coverage already in size_based
     goalSC <- unique(size_based$SC[size_based$Assemblage == pt_names[k] &
@@ -193,9 +209,11 @@
 
   do.call(rbind, lapply(seq_len(N_new), function(k) {
 
-    T_k <- round(median(vapply(seq_len(use_ndraws),
-                               function(i) incfreq_draws_list[[i]][[k]][1L],
-                               numeric(1L))))
+    T_k <- round(median(vapply(
+      seq_len(use_ndraws),
+      function(i){ incfreq_draws_list[[i]][[k]][1L] },
+      numeric(1L)
+    )))
     t_ref <- t_grid[which.min(abs(t_grid - T_k))]
     crv_k <- curves[[k]]
 
@@ -304,7 +322,7 @@ iNEXT_stan <- function(W, formula, data, q = c(0, 1, 2), datnew = NULL,
   # incfreq_draws: array [n_draws_total, S_obs + 1, N_new]
   # [draw, 1, k]     = t_obs_int[k]
   # [draw, s + 1, k] = detection count for species s at design point k
-  # This is exactly the incidence-freq format expected by TD.m.est_inc and Chat.Sam.
+  # This feeds into TD.m.est_inc and Chat.Sam.
   incfreq_draws <- rstan::extract(fit, pars = "incfreq_new")$incfreq_new
 
   n_draws_total <- dim(incfreq_draws)[1]
@@ -312,18 +330,33 @@ iNEXT_stan <- function(W, formula, data, q = c(0, 1, 2), datnew = NULL,
   draw_idx <- sort(sample.int(n_draws_total, use_ndraws))
   incfreq_draws <- incfreq_draws[draw_idx, , , drop = FALSE]
 
-  # incfreq_draws_list[[i]][[k]] = c(t_obs_int, sp1_count, ..., spS_obs_count)
+  # convert to list incfreq_draws_list[[i]][[k]] = c(t_obs_int, sp1_count, ..., spS_obs_count)
   incfreq_draws_list <- lapply(
     X = seq_len(use_ndraws),
-    function(i, A) lapply(seq_len(N_new), function(k) A[i, , k]),
+    function(i, A){
+      lapply(
+        seq_len(N_new),
+        function(k){ A[i, , k] }
+      ) 
+    },
     A = incfreq_draws
   )
+  
+  # # there may be cases in which a given species was not present in the posterior pred. dist.
+  # # remove these cases for cleaner logic flowing into iNEXT (a species not present in sample
+  # # would not end up in the inc_freq vector)
+  # incfreq_draws_list <- lapply(
+  #   incfreq_draws_list,
+  #   function(x){
+  #     lapply(x, function(x_k){ x_k[x_k != 0] })
+  #   }
+  # )
 
   # ---- Build per-draw accumulation curves for each design point ----
   # t_obs_int is always the first element of each incfreq vector
   t_pred_median <- median(sapply(
     seq_len(use_ndraws),
-    function(i) incfreq_draws_list[[i]][[1]][1]
+    function(i){ incfreq_draws_list[[i]][[1]][1] }
   ))
   t_grid <- unique(round(seq(1, 2 * t_pred_median, length.out = 40)))
 
