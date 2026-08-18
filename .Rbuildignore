@@ -14,3 +14,4 @@
 ^\.DS_Store$
 ^\.gitignore
 ^README-.*\.png$
+^manuscript$

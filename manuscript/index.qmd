@@ -1,0 +1,15 @@
+---
+title: Accounting for continuous gradients in diversity interpolation and extrapolation
+authors:
+  - name: Dustin G. Gannon
+    affiliation: Oregon State University
+    roles: writing
+    corresponding: true
+bibliography: references.bib
+---
+
+<!-- Sections -->
+
+{{< include _sections/intro.qmd >}}
+
+{{< include _sections/methods.qmd >}}

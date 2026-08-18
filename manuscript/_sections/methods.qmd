@@ -1,0 +1,84 @@
+# Methods
+
+Interpolation and extrapolation using Hill numbers is built on the model of sample multiple replicate units (e.g., square plots, transects, etc.) within a given 'true assemblage'. Thus, if the units are randomly placed and cover a small area relative to that of the assemblage, the probability that a given species $i$ is found in unit $j$ is assumed to be $\pi_{i}$ for each species $i = 1,2,...,S$ in the assemblage, across all units $j = 1,2,...,T$. The *incidence matrix*, $\underset{(S \times T)}{\mathbf{W}}$, is a matrix of zeros and ones indicating whether species $i$ was found in unit $t$. Thus, let
+
+$$y_i = \mathbf{W}_i\mathbf{1}_T = \sum_{j = 1}^T w_{ij}$$
+
+be the row sums, or the number of units in which species $i$ was found out of $T$ total units. We assume that, given $\boldsymbol{\pi} = [\pi_1\ \pi_2\ ...\ \pi_S]^\top$,
+
+$$P(Y_i = y_i) = \prod_{i = 1}^{S} {T \choose y_i} \pi_i^{y_i}(1 - \pi_i)^{y_i}.$$ {#eq-binom-prod}
+
+Based on @eq-binom-prod, @chao_rarefaction_2014 derived estimators for the diversity of order $q$ for the assemblage, defined as
+
+$$\begin{aligned}
+^q\Delta = \left(\sum_{i = 1}^S \left(\frac{\pi_i}{ \sum_{j = 1}^S \pi_j } \right)^q \right)^{\frac{1}{1-q}} &\ &\text{for} &\ q \ge 0, q\ne 1
+\end{aligned}$$ {#eq-hill-diversity}
+
+where $^1\Delta$ is defined as
+
+$$\underset{q \to 1}{\text{lim}}^q\Delta = \exp\left(- \sum_{i = 1}^Sp_i\log(p_i) \right)$$ where $p_i = \pi_i \big/ \sum_{j = 1}^S \pi_j$ is the normalized proportion of the assemblage that species $i$ makes up. @chao_rarefaction_2014 derive the estimators based on what are called *incidence frequency counts*, denoted $Q_k$ for $k = 1,2,...,T$. These are the number of species that occur *exactly* $k$ times in the sample of $T$ units, such that $Q_1$ is the number of *singletons* (species found just once) and $Q_0$ is the (unknown) number of species that were not detected in the sample. Specifically, interpolation, or the estimated diversity if sampling $t \le T$ sites is
+
+$$\begin{aligned}
+^q\Delta(t) &= \left(\sum_{k = 1}^t \frac{k}{U_t} \mathbb{E}[Q_k(t)] \right)^\frac{1}{1 - q} \text{ for } q \ne 1\\
+^1\Delta(t) &= \exp\left(\sum_{k = 1}^t \left( - \frac{k}{\lambda_t}\log \frac{k}{\lambda_t} \right)\mathbb{E}[Q_k(t)] \right) \text{ for } q = 1
+\end{aligned}$${#eq-interp-gen-q}
+
+where $\mathbb{E}$ denotes the expectation and $\lambda_t$ is the expected number of incidences in a sample of size $t \le T$ units (over all species). For, $T + t^*$, that is, extrapolating the diversity to what one might see at greater sample sizes, the expressions are similar, but different and rely on an estimate of $Q_0$ [see Table 2 of @chao_rarefaction_2014].
+
+Here, our goal is to extend the capacity of this approach to handle cases in which, instead of sampling many units within each of a few assemblages, we assume we sample units over many assemblages ($N$) that occur along an environmental gradient. We may then wish to compare the diversity accumulation curves at fixed, possibly unobserved values along the environment gradient. We can extend the binomial product model in @eq-binom-prod to allow for continuous covariates across assemblages by allowing $\pi_i$ to also vary in a predictable way across $j = 1, 2, ..., N$. Specifically, assume that
+
+$$\begin{split}
+g(\pi_{ij}) = {\mathbf x}_j^\top\boldsymbol \beta_i\\
+w_{ij} \sim \text{Bernoulli}(\pi_{ij})
+\end{split}$$
+where $g()$ is a suitable link function, such as the *logit* link, $w_{ij}$ is the detection or non-detection of species $i$ in unit $j$, $\mathbf{x}_j$ is a $P$-vector of covariates measured at unit $j$, and $\boldsymbol \beta_i$ is a $P$-vector of species-specific regression coefficients determining how the linear predictor for species $i$ varies along the environmental gradient. We can then rewrite the binomial product model with covariates as
+
+$$P(\mathbf{W}) = \prod_{i = 1}^S \prod_{j = 1}^N \bigg(g^{-1}(\mathbf{x}_j^\top \boldsymbol \beta_i)\bigg)^{w_{ij}} \bigg(1 - g^{-1}(\mathbf{x}_j^\top \boldsymbol \beta_i) \bigg)^{1 - w_{ij}}.$$ {#eq-binom-prod-reg}
+
+To connect the model to interpolated and extrapolated diversity, we need to first condition on the environment ($\mathbf{x}^*$) and derive the incidence frequency counts, or rather, the *expected* incidence frequency counts, $\mathbb{E}[Q_k(t)]$, since we will have little or no data on incidence at $\mathbf{x}^*$. We can derive these expectations conditional on $\mathbf{x}^*, \boldsymbol \beta_1, \dots, \boldsymbol \beta_S$ as
+
+$$\mathbb{E}[Q_k(t)\ \big|\ \mathbf{x}^*, \boldsymbol \beta_1, \dots, \boldsymbol \beta_S] = \sum_{i = 1}^S {t \choose k} \bigg(g^{-1}({\mathbf{x}^*}^\top \boldsymbol \beta_i)\bigg)^k \bigg(1 - g^{-1}({\mathbf{x}^*}^\top \boldsymbol \beta_i) \bigg)^{t - k}.$${#eq-expected-qk} 
+
+Thus, given estimates for $\boldsymbol \beta_i$, $i = 1,2,...,S$, we can estimate the expected value of $Q_k(t)$ for use in @eq-interp-gen-q. The issue then becomes this: *at what point do we switch between interpolation and extrapolation?* In other words, what is $T$, the number of replicate samples for $\mathbf{x}^*$, given that we haven't actually observed $\mathbf{x}^*$, or have only taken a few samples at $\mathbf{x}^*$? To address this question, we turn to information theory.
+
+The Fisher Information on a parameter $\theta$ from a given population sample of size $n$, $X_1, X_2, \dots, X_n$, is defined as
+$$\mathcal{I}(\theta) = \mathbb{E}\left[ \left( \frac{\partial}{\partial \theta}\log f({\mathbf X} | \theta) \right)^2 \bigg| \theta \right]$$
+which measures the curvature of the likelihood around the maximum likelihood estimate. For the binomial product model defined by @eq-binom-prod, the information on the probability that a given species $i$ is found in a unit, $\pi_i$, is
+$$\mathcal{I}(\pi_i) = \mathbb{E}_{Y_i}\left[ \left( \frac{\partial}{\partial \pi_i} \log P(Y_i = y_i) \right)^2 \right] = \frac{T}{ \pi_i(1 - \pi_i) }$$
+ {#eq-info-pi} where the expectation is taken over $Y_i$, the number of replicate units in which a given species is found in a sample of size $T$. Thus, the information scales with $T$, but is dependent on $\pi_i$, where we can gain the most information on $\pi_i$ if $\pi_i = 0.5$, and decreases as $\pi_i$ approaches zero or 1. We use this fact as a through line to help approximate the critical point, $t^*$, at which we switch from interpolation to extrapolation in the regression setting.
+
+The model defined in @eq-binom-prod-reg is equivalent to separate logistic regressions for each species, modeling how the probability of detecting species $i$ in a given unit changes with covariates in $\mathbf{X}$. The information available in the sample on the regression coefficients, $\boldsymbol \beta_i$, can be shown to be <!-- -->
+$$\mathcal{I}(\boldsymbol \beta_i) = \mathbf{X}^\top \mathbf{D X}$$
+where $\mathbf{W}$ is an $N\times N$ diagonal weights matrix with diagonal elements $D_{tt} = \pi_{it}(1 - \pi_{it})$ for $t = 1,2,\dots, N$, where $\pi_{it} = g^{-1}(\mathbf{x}_t^\top \boldsymbol \beta_i)$. If we define $\mathbf{X}$ as the trivial case of an *intercept only* model such that $\pi_{it} = \pi_i$ for all $t = 1,2,...,N$, then we recover @eq-info-pi since there is a one-to-one relationship between $\beta_i$ and $\pi_i$ in that case.
+
+To connect this information on $\boldsymbol \beta_i$ to the information on a new environmental setting $\mathbf{x}^*$, we need one more piece. Specifically, it is well known that the inverse of the empirical information, which is defined as the Hessian evaluated as the maximum likelihood estimate (MLE), is an asymptotically unbiased estimate of the variance of the MLE estimator $\hat \theta_{MLE}$. Thus, we first derive an approximate estimate of the variance of $\hat{\pi}_i^* = g^{-1}(\mathbf{x}^* \hat{\boldsymbol \beta}_i)$ using the Delta Method, then invert it to approximate the information available on $\pi_i^*$ given the observed data $\mathbf{X}$. This process yields
+
+$$\begin{aligned}
+\mathcal{I}(\pi_i^*) &= \left[ \left( \nabla_{\boldsymbol \beta_i} g^{-1}(\mathbf{x}^* \boldsymbol \beta_i) \right)^\top \mathcal{I}(\boldsymbol \beta_i)^{-1} \left( \nabla_{\boldsymbol \beta_i} g^{-1}(\mathbf{x}^* \boldsymbol \beta_i) \right) \right]^{-1}\\
+&= \left[ \left( \mathbf{x}^* \pi_i^*(1 - \pi_i^*) \right)^\top
+\mathcal{I}(\boldsymbol \beta_i)^{-1}
+\left( \mathbf{x}^* \pi_i^*(1 - \pi_i^*) \right) \right]^{-1}
+\end{aligned}$$ {#eq-info-pi-star}
+
+where $\nabla_{\boldsymbol \beta_i}$ denotes the gradient with respect to the elements of $\boldsymbol \beta_i$. It can be easily verified that, given the intercept-only model, this expression reduces to @eq-info-pi. Furthermore, we can extend this approach to an arbitrary number of environmental settings, $\tilde n$ by stacking each $\mathbf{x}^*$ along the rows of a matrix $\underset{\tilde n \times P}{\mathbf{X}^*}$ such that $\mathcal{I}(\pi_i^*)$ defines an $\tilde n \times \tilde n$ information matrix, the diagonal of which defines the information for each new environmental condition we wish to analyze.
+
+## Defining the critical point $t^*$
+
+Noting that the observed number of units $T = \mathcal{I}(\pi_i) \times \pi_i(1 - \pi_i)$ from @eq-info-pi, we use an analogous measure for the critical point in the regression setting. Namely, we define
+
+$$t^* = \text{diag}\left( \tilde{\mathbf{D}}\big( {\mathbf{X}^*}^\top g^{-1}(\mathbf{X}^*\boldsymbol \beta_i) \big)^\top 
+(\mathbf{X}^\top \mathbf{D}\mathbf{X})^{-1} 
+\big( {\mathbf{X}^*}^\top g^{-1}(\mathbf{X}^* \boldsymbol \beta_i) \big) \right)$$
+ {#eq-tstar-general}
+
+as the critical point between interpolation and extrapolation in the regression setting, where the $\text{diag}()$ operator extracts the diagonal from the matrix, and $\tilde{\mathbf{D}}$ is a $\tilde n \times \tilde n$ diagonal matrix with elements $\tilde \pi_{it}(1 - \tilde \pi_{it})$. It is again easy to verify that this reduces to $T$ from @eq-info-pi in the intercept-only model with $\mathbf{X}^* := [1]$ (that is, a scalar value of 1) since $\tilde \pi_{it} = \tilde \pi_{it'} = \hat{\pi}_{ij} = \hat{\pi}_{ij'}$ for all $j,j' = 1,2,...,N$ and $t,t' = 1,2,...,\tilde n$.
+
+## Propagating uncertainty
+
+@chao_rarefaction_2014 constructed confidence intervals for the interpolations and extrapolations using non-parametric bootstrapping. This may not be an option in the regression setting since we can't resample units given the same environmental conditions, either because there is only one assemblage corresponding to each unique row of $\mathbf{X}$, or very few. We therefore take a Bayesian approach, fitting a Bayesian logistic regression model to estimate each $\pi_{ij}$ given the environment, then treating the species diversity curves as posterior predictive quantities. That is, we estimate the posterior predictive distribution of the diversity at a given number of units, given the data and posterior of $\boldsymbol \pi$, $p(^q \Delta(t, \tilde{\mathbf{y}})\ |\ \boldsymbol{\pi})$, where $\tilde{\mathbf{y}}$ is the posterior predictive quantity summing over the rows of the posterior predictive incidence matrix.
+
+For priors on regression coefficients we use weakly informative priors based on the recommendations of [Gelman]{style="color:red;"}, letting $\beta_{ij} \sim \mathcal{N}(0, 5)$, however, the user can provide their own priors for these coefficients.
+
+## Model checking
+
+A key component of modeling is first checking the fit of the model to data. The model we describe here may suffer from a lack of flexibility due to assumptions of independence among species detection probabilities.
