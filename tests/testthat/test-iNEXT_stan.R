@@ -61,12 +61,23 @@ test_that("full pipeline W -> Stan -> per-draw curves runs without error", {
   )
 
   expect_type(res, "list")
-  expect_named(res, c("stanfit", "curves"), ignore.order = TRUE)
-  expect_length(res$curves, 1L)   # one design point when datnew = NULL
+  expect_named(
+    res,
+    c("DataInfo", "iNextEst", "AsyEst", "stanfit", "curves", "incfreq_draws_list"),
+    ignore.order = TRUE
+  )
+  expect_length(res$curves, 1L)          # one design point when datnew = NULL
+  expect_length(res$incfreq_draws_list, 50L)
 
   crv <- res$curves[[1]]
   expect_s3_class(crv, "data.frame")
-  expect_named(crv, c("draw", "t", "order_q", "qD"))
+  expect_named(crv, c("draw", "t", "order_q", "qD", "SC"), ignore.order = TRUE)
   expect_true(all(crv$t > 0))
   expect_setequal(unique(crv$draw), sort(unique(crv$draw)))
+
+  # incfreq_draws_list[[i]][[1]] must start with t_obs_int > 0 and have
+  # at least S_obs + 1 elements (t_obs_int + observed species counts)
+  vec1 <- res$incfreq_draws_list[[1L]][[1L]]
+  expect_true(vec1[1L] > 0L)
+  expect_gte(length(vec1), nrow(td$W) + 1L)
 })

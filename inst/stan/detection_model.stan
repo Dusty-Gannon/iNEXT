@@ -33,10 +33,10 @@ model {
   
   // --- priors --- //
   // Intercept centered at logit(-1) ~ 0.27 detection rate; slope coefficients
-  // centered at 0.  Both use sd=2 to allow rare species (logit < -4) and
-  // near-certain detectors (logit > 3) without strong shrinkage to 0.5.
+  // centered at 0. sd=4 is intentionally diffuse to allow rare species
+  // (logit << -1) without the N(0,1) shrinkage that collapsed Q1 in PPCs.
   for(s in 1:S_obs){
-    beta[s, 1] ~ normal(0, 3);
+    beta[s, 1] ~ normal(-1, 4);
     if(K > 1)
       beta[s, 2:K] ~ normal(0, 4);
   }

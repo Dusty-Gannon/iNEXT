@@ -40,6 +40,9 @@ std_estims <- iNEXT(dat_incfreq, datatype = "incidence_freq", q = c(0, 1, 2))
 reg_check <- iNEXT_stan(W_m0, formula = ~ 1, data = W_standard$data, use_ndraws = 200, cores = 4)
 
 
+ggiNEXT(std_estims, color.var = "Order.q") +
+ggiNEXT(reg_check, color.var = "Order.q")
+
 # ---- Posterior Predictive Checks ----
 # Goal: verify that the posterior predictive incidence frequencies are consistent
 # with the observed data before comparing extrapolation trajectories.
@@ -57,15 +60,16 @@ obs_counts <- rowSums(W_m0)
 obs_qk <- vapply(1:10, function(k) sum(obs_counts == k), integer(1L))
 S_obs_data <- nrow(W_m0)
 
-# Raw posterior predictive draws: [n_draws, S_obs + 1, N_new]
-# Row 1 of dim-2 = t_obs_int; rows 2+ = per-species detection counts
-incfreq_pp <- rstan::extract(reg_check$stanfit, pars = "incfreq_new")$incfreq_new
-pp_t <- incfreq_pp[, 1L, 1L]
-pp_sp <- incfreq_pp[, -1L, 1L]  # [n_draws x S_obs]
+# Augmented PP draws for design point 1: list of length use_ndraws, each
+# element is c(t_obs_int, x_obs_1, ..., x_obs_S, x_unobs_1, ..., x_unobs_Q0)
+pp_vecs <- lapply(reg_check$incfreq_draws_list, `[[`, 1L)
 
-pp_S_obs <- rowSums(pp_sp > 0L)
+pp_t  <- vapply(pp_vecs, `[[`, numeric(1L), 1L)
+pp_sp <- lapply(pp_vecs, function(v) v[-1L])   # per-draw species counts (variable length)
 
-pp_qk_mat <- t(apply(pp_sp, 1L, function(x)
+pp_S_obs <- vapply(pp_sp, function(x) sum(x > 0L), integer(1L))
+
+pp_qk_mat <- do.call(rbind, lapply(pp_sp, function(x)
   vapply(1:10, function(k) sum(x == k), integer(1L))
 ))
 

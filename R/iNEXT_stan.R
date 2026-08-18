@@ -245,6 +245,34 @@
 }
 
 
+# Augment a posterior predictive incidence-frequency vector with Q0 unobserved
+# species following the Chao et al. (2013) bootstrap protocol for incidence data.
+#   incfreq_vec : c(T, x1, ..., xS_obs) — one PP draw for a single design point
+#   P_s         : length-S_obs vector of posterior detection probs for this draw
+.augment_incfreq <- function(incfreq_vec, P_s) {
+  T <- incfreq_vec[1L]
+  # Expected Qk using binomial PMF (real-valued for formula stability)
+  Q1_exp <- sum(dbinom(1L, T, P_s))
+  Q2_exp <- sum(dbinom(2L, T, P_s))
+  # Chao2 estimate of unobserved species (standard form: /2 in denominator)
+  Q0_hat <- if (Q2_exp > 0) {
+    (T - 1) / T * Q1_exp^2 / (2 * Q2_exp)
+  } else {
+    (T - 1) / T * Q1_exp * (Q1_exp - 1) / 2
+  }
+  Q0 <- max(0L, round(Q0_hat))
+  if (Q0 == 0L) return(incfreq_vec)
+  # Expected total incidences across T pseudo-sites
+  U_exp  <- T * sum(P_s)
+  # Coverage smoothing factor A, then coverage estimate C_hat
+  A      <- if (Q1_exp > 0) T * Q0_hat / (T * Q0_hat + Q1_exp) else 1
+  C_hat  <- 1 - Q1_exp / U_exp * A
+  # Average per-site detection probability for each unobserved species
+  p_unobs <- min(1, U_exp / T * (1 - C_hat) / Q0)
+  c(incfreq_vec, rbinom(Q0, T, p_unobs))
+}
+
+
 .get_stan_model <- function() {
   if (!requireNamespace("rstan", quietly = TRUE))
     stop("Package 'rstan' is required. Install it with install.packages('rstan').")
@@ -318,29 +346,28 @@ iNEXT_stan <- function(W, formula, data, q = c(0, 1, 2), datnew = NULL,
     c(list(object = mod, data = datlist), stan_args)
   )
 
-  # ---- Extract incfreq_new and subsample posterior draws ----
+  # ---- Extract incfreq_new and P_new; subsample posterior draws ----
   # incfreq_draws: array [n_draws_total, S_obs + 1, N_new]
   # [draw, 1, k]     = t_obs_int[k]
   # [draw, s + 1, k] = detection count for species s at design point k
-  # This feeds into TD.m.est_inc and Chat.Sam.
+  # P_new_draws: array [n_draws_total, S_obs, N_new]
+  # [draw, s, k]     = posterior detection prob for species s at design point k
   incfreq_draws <- rstan::extract(fit, pars = "incfreq_new")$incfreq_new
+  P_new_draws   <- rstan::extract(fit, pars = "P_new")$P_new
 
   n_draws_total <- dim(incfreq_draws)[1]
   use_ndraws <- min(use_ndraws, n_draws_total)
   draw_idx <- sort(sample.int(n_draws_total, use_ndraws))
   incfreq_draws <- incfreq_draws[draw_idx, , , drop = FALSE]
+  P_new_draws   <- P_new_draws[draw_idx, , , drop = FALSE]
 
-  # convert to list incfreq_draws_list[[i]][[k]] = c(t_obs_int, sp1_count, ..., spS_obs_count)
-  incfreq_draws_list <- lapply(
-    X = seq_len(use_ndraws),
-    function(i, A){
-      lapply(
-        seq_len(N_new),
-        function(k){ A[i, , k] }
-      ) 
-    },
-    A = incfreq_draws
-  )
+  # Build incfreq_draws_list[[i]][[k]] = c(t_obs_int, sp1_count, ..., spS_obs_count, unobs...)
+  # Each vector is augmented with Q0 unobserved species via .augment_incfreq().
+  incfreq_draws_list <- lapply(seq_len(use_ndraws), function(i) {
+    lapply(seq_len(N_new), function(k) {
+      .augment_incfreq(incfreq_draws[i, , k], P_new_draws[i, , k])
+    })
+  })
   
   # # there may be cases in which a given species was not present in the posterior pred. dist.
   # # remove these cases for cleaner logic flowing into iNEXT (a species not present in sample
@@ -405,7 +432,8 @@ iNEXT_stan <- function(W, formula, data, q = c(0, 1, 2), datnew = NULL,
                               coverage_based = coverage_based),
               AsyEst = AsyEst,
               stanfit = fit,
-              curves = curves)
+              curves = curves,
+              incfreq_draws_list = incfreq_draws_list)
   class(out) <- c("iNEXT_stan", "iNEXT")
   out
 }
