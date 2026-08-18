@@ -267,7 +267,7 @@
   } else {
     (T - 1) / T * Q1_exp * (Q1_exp - 1) / 2
   }
-  Q0 <- max(0L, round(Q0_hat))
+  Q0 <- max(0L, ceiling(Q0_hat))
   # Expected total incidences and sample coverage
   U_exp <- T * sum(P_s)
   A     <- if (Q1_exp > 0) T * Q0_hat / (T * Q0_hat + Q1_exp) else 1
