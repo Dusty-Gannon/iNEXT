@@ -3,6 +3,8 @@
 
 source(here::here("manuscript/simulations/sim_landscape.R"))
 devtools::load_all(here::here())
+library(ggplot2)
+library(patchwork)
 
 # ---- Simulation ----
 
@@ -51,9 +53,6 @@ ggiNEXT(reg_check, color.var = "Order.q")
 #   2. S_obs per draw vs observed -- model calibration for richness
 #   3. Qk frequency distribution -- Q1/Q2 drive Chao2 extrapolation; misfit here
 #      explains divergent extrapolation curves
-
-library(ggplot2)
-library(patchwork)
 
 # Observed quantities
 obs_counts <- rowSums(W_m0)

@@ -245,13 +245,20 @@
 }
 
 
-# Augment a posterior predictive incidence-frequency vector with Q0 unobserved
-# species following the Chao et al. (2013) bootstrap protocol for incidence data.
-#   incfreq_vec : c(T, x1, ..., xS_obs) — one PP draw for a single design point
+# Construct a Chao et al. (2013)-corrected pseudo-incidence-frequency vector
+# from a single posterior draw's detection probabilities.
+#
+# Because Stan is fit only to species with rowSums(W) > 0, the posterior P_s
+# is conditioned on detection (y_s > 0), which inflates P_s relative to the
+# true p_s. The correction factor tau deflates P_s before drawing the pseudo-
+# community, removing this selection bias. Unobserved species (Q0 of them) are
+# appended with a shared probability p_unobs derived from coverage theory.
+#
+#   incfreq_vec : c(T, x1, ..., xS_obs) — Stan PP draw (only T = element 1 is used)
 #   P_s         : length-S_obs vector of posterior detection probs for this draw
 .augment_incfreq <- function(incfreq_vec, P_s) {
   T <- incfreq_vec[1L]
-  # Expected Qk using binomial PMF (real-valued for formula stability)
+  # Expected Qk via binomial PMF (real-valued for Chao formula stability)
   Q1_exp <- sum(dbinom(1L, T, P_s))
   Q2_exp <- sum(dbinom(2L, T, P_s))
   # Chao2 estimate of unobserved species (standard form: /2 in denominator)
@@ -261,15 +268,22 @@
     (T - 1) / T * Q1_exp * (Q1_exp - 1) / 2
   }
   Q0 <- max(0L, round(Q0_hat))
-  if (Q0 == 0L) return(incfreq_vec)
-  # Expected total incidences across T pseudo-sites
-  U_exp  <- T * sum(P_s)
-  # Coverage smoothing factor A, then coverage estimate C_hat
-  A      <- if (Q1_exp > 0) T * Q0_hat / (T * Q0_hat + Q1_exp) else 1
-  C_hat  <- 1 - Q1_exp / U_exp * A
-  # Average per-site detection probability for each unobserved species
-  p_unobs <- min(1, U_exp / T * (1 - C_hat) / Q0)
-  c(incfreq_vec, rbinom(Q0, T, p_unobs))
+  # Expected total incidences and sample coverage
+  U_exp <- T * sum(P_s)
+  A     <- if (Q1_exp > 0) T * Q0_hat / (T * Q0_hat + Q1_exp) else 1
+  C_hat <- 1 - Q1_exp / U_exp * A
+  # Chao (2013) tau: correction for P_s being inflated by conditioning on y_s > 0.
+  # E(X/T | X > 0) = p / (1 - (1-p)^T), so observed species P_s > true p_s.
+  # tau deflates P_s so that the expected undetected incidence mass is preserved.
+  denom_tau <- sum(P_s * (1 - P_s)^T)
+  tau <- if (denom_tau > 0 && Q0_hat > 0) U_exp / T * (1 - C_hat) / denom_tau else 0
+  # Adjusted detection probs for observed species; clamped to [0, 1]
+  P_s_adj <- pmax(0, pmin(1, P_s * (1 - tau * (1 - P_s)^T)))
+  # Average detection prob for each of the Q0 unobserved species
+  p_unobs <- if (Q0 > 0L) min(1, U_exp / T * (1 - C_hat) / Q0) else 0
+  # Draw pseudo-incidence counts for observed + unobserved species
+  pi_star <- c(P_s_adj, rep(p_unobs, Q0))
+  c(T, rbinom(length(pi_star), T, pi_star))
 }
 
 
