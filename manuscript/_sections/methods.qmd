@@ -44,8 +44,10 @@ Thus, given estimates for $\boldsymbol \beta_i$, $i = 1,2,...,S$, we can estimat
 The Fisher Information on a parameter $\theta$ from a given population sample of size $n$, $X_1, X_2, \dots, X_n$, is defined as
 $$\mathcal{I}(\theta) = \mathbb{E}\left[ \left( \frac{\partial}{\partial \theta}\log f({\mathbf X} | \theta) \right)^2 \bigg| \theta \right]$$
 which measures the curvature of the likelihood around the maximum likelihood estimate. For the binomial product model defined by @eq-binom-prod, the information on the probability that a given species $i$ is found in a unit, $\pi_i$, is
-$$\mathcal{I}(\pi_i) = \mathbb{E}_{Y_i}\left[ \left( \frac{\partial}{\partial \pi_i} \log P(Y_i = y_i) \right)^2 \right] = \frac{T}{ \pi_i(1 - \pi_i) }$$
- {#eq-info-pi} where the expectation is taken over $Y_i$, the number of replicate units in which a given species is found in a sample of size $T$. Thus, the information scales with $T$, but is dependent on $\pi_i$, where we can gain the most information on $\pi_i$ if $\pi_i = 0.5$, and decreases as $\pi_i$ approaches zero or 1. We use this fact as a through line to help approximate the critical point, $t^*$, at which we switch from interpolation to extrapolation in the regression setting.
+
+$$\mathcal{I}(\pi_i) = \mathbb{E}_{Y_i}\left[ \left( \frac{\partial}{\partial \pi_i} \log P(Y_i = y_i) \right)^2 \right] = \frac{T}{ \pi_i(1 - \pi_i) }$${#eq-info-pi} 
+
+where the expectation is taken over $Y_i$, the number of replicate units in which a given species is found in a sample of size $T$. Thus, the information scales with $T$, but is dependent on $\pi_i$, where we can gain the most information on $\pi_i$ if $\pi_i = 0.5$, and decreases as $\pi_i$ approaches zero or 1. We use this fact as a through line to help approximate the critical point, $t^*$, at which we switch from interpolation to extrapolation in the regression setting.
 
 The model defined in @eq-binom-prod-reg is equivalent to separate logistic regressions for each species, modeling how the probability of detecting species $i$ in a given unit changes with covariates in $\mathbf{X}$. The information available in the sample on the regression coefficients, $\boldsymbol \beta_i$, can be shown to be <!-- -->
 $$\mathcal{I}(\boldsymbol \beta_i) = \mathbf{X}^\top \mathbf{D X}$$
@@ -53,12 +55,14 @@ where $\mathbf{W}$ is an $N\times N$ diagonal weights matrix with diagonal eleme
 
 To connect this information on $\boldsymbol \beta_i$ to the information on a new environmental setting $\mathbf{x}^*$, we need one more piece. Specifically, it is well known that the inverse of the empirical information, which is defined as the Hessian evaluated as the maximum likelihood estimate (MLE), is an asymptotically unbiased estimate of the variance of the MLE estimator $\hat \theta_{MLE}$. Thus, we first derive an approximate estimate of the variance of $\hat{\pi}_i^* = g^{-1}(\mathbf{x}^* \hat{\boldsymbol \beta}_i)$ using the Delta Method, then invert it to approximate the information available on $\pi_i^*$ given the observed data $\mathbf{X}$. This process yields
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \mathcal{I}(\pi_i^*) &= \left[ \left( \nabla_{\boldsymbol \beta_i} g^{-1}(\mathbf{x}^* \boldsymbol \beta_i) \right)^\top \mathcal{I}(\boldsymbol \beta_i)^{-1} \left( \nabla_{\boldsymbol \beta_i} g^{-1}(\mathbf{x}^* \boldsymbol \beta_i) \right) \right]^{-1}\\
 &= \left[ \left( \mathbf{x}^* \pi_i^*(1 - \pi_i^*) \right)^\top
 \mathcal{I}(\boldsymbol \beta_i)^{-1}
 \left( \mathbf{x}^* \pi_i^*(1 - \pi_i^*) \right) \right]^{-1}
-\end{aligned}$$ {#eq-info-pi-star}
+\end{aligned}
+$$ {#eq-info-pi-star}
 
 where $\nabla_{\boldsymbol \beta_i}$ denotes the gradient with respect to the elements of $\boldsymbol \beta_i$. It can be easily verified that, given the intercept-only model, this expression reduces to @eq-info-pi. Furthermore, we can extend this approach to an arbitrary number of environmental settings, $\tilde n$ by stacking each $\mathbf{x}^*$ along the rows of a matrix $\underset{\tilde n \times P}{\mathbf{X}^*}$ such that $\mathcal{I}(\pi_i^*)$ defines an $\tilde n \times \tilde n$ information matrix, the diagonal of which defines the information for each new environmental condition we wish to analyze.
 
@@ -66,10 +70,11 @@ where $\nabla_{\boldsymbol \beta_i}$ denotes the gradient with respect to the el
 
 Noting that the observed number of units $T = \mathcal{I}(\pi_i) \times \pi_i(1 - \pi_i)$ from @eq-info-pi, we use an analogous measure for the critical point in the regression setting. Namely, we define
 
-$$t^* = \text{diag}\left( \tilde{\mathbf{D}}\big( {\mathbf{X}^*}^\top g^{-1}(\mathbf{X}^*\boldsymbol \beta_i) \big)^\top 
+$$
+t^* = \text{diag}\left( \tilde{\mathbf{D}}\big( {\mathbf{X}^*}^\top g^{-1}(\mathbf{X}^*\boldsymbol \beta_i) \big)^\top 
 (\mathbf{X}^\top \mathbf{D}\mathbf{X})^{-1} 
-\big( {\mathbf{X}^*}^\top g^{-1}(\mathbf{X}^* \boldsymbol \beta_i) \big) \right)$$
- {#eq-tstar-general}
+\big( {\mathbf{X}^*}^\top g^{-1}(\mathbf{X}^* \boldsymbol \beta_i) \big) \right)
+$${#eq-tstar-general}
 
 as the critical point between interpolation and extrapolation in the regression setting, where the $\text{diag}()$ operator extracts the diagonal from the matrix, and $\tilde{\mathbf{D}}$ is a $\tilde n \times \tilde n$ diagonal matrix with elements $\tilde \pi_{it}(1 - \tilde \pi_{it})$. It is again easy to verify that this reduces to $T$ from @eq-info-pi in the intercept-only model with $\mathbf{X}^* := [1]$ (that is, a scalar value of 1) since $\tilde \pi_{it} = \tilde \pi_{it'} = \hat{\pi}_{ij} = \hat{\pi}_{ij'}$ for all $j,j' = 1,2,...,N$ and $t,t' = 1,2,...,\tilde n$.
 
